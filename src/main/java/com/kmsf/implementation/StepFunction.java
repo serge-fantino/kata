@@ -24,10 +24,35 @@ import java.util.function.Function;
 public class StepFunction<IN extends Comparable, OUT> implements Function<IN, OUT> {
 
     private final OUT constantValue;
-    private List<Step<IN, OUT>> orderedSteps = Collections.emptyList();
+    private HeadTailList<Step<IN, OUT>> orderedSteps = new HeadTailList<>();
 
     public StepFunction(OUT constantValue) {
         this.constantValue = constantValue;
+    }
+
+    /**
+     * create a new StepFUnction by adding a new Step at the right position
+     * @param function
+     * @param newStep
+     */
+    protected StepFunction(StepFunction<IN, OUT> function, Step<IN, OUT> newStep) {
+        this.constantValue = function.constantValue;
+        this.orderedSteps = insertStep(function.orderedSteps, newStep);
+    }
+
+    public StepFunction<IN, OUT> addStep(IN limit, OUT value) {
+        Step step = new Step(limit, value);
+        if (orderedSteps.contains(step)) return this;
+        return new StepFunction<IN, OUT>(this, new Step<IN, OUT>(limit, value));
+    }
+
+    public StepFunction<IN, OUT> addSteps(IN[] steps, OUT[] values) {
+        assert steps.length==values.length;
+        var function = this;
+        for (int index = 0; index < steps.length; index++) {
+            function = function.addStep(steps[index], values[index]);
+        }
+        return function;
     }
 
     @Override
@@ -43,37 +68,35 @@ public class StepFunction<IN extends Comparable, OUT> implements Function<IN, OU
         return this.constantValue;
     }
 
-    protected StepFunction(StepFunction<IN, OUT> function, Step<IN, OUT> newStep) {
-        this.constantValue = function.constantValue;
-        this.orderedSteps = new ArrayList<>(function.orderedSteps);
-        this.orderedSteps.add(newStep);
-        this.orderedSteps.sort(Comparator.reverseOrder());
+    public int size() {
+        return orderedSteps.size();
     }
 
-    public StepFunction<IN, OUT> addStep(IN limit, OUT value) {
-        if (assertUniqueValue(limit, value)) {
-            return new StepFunction<IN, OUT>(this, new Step<IN, OUT>(limit, value));
-        }
-        // else do nothing or throw an exception
-        return this;
+    private HeadTailList<Step<IN,OUT>> insertStep(HeadTailList<Step<IN,OUT>> orderedSteps, Step<IN,OUT> newStep) {
+        if (orderedSteps.isEmpty()) return new HeadTailList(newStep);
+        var head = orderedSteps.head();
+        if (head.compareTo(newStep)<0) return orderedSteps.add(newStep);
+        if (head.compareTo(newStep)==0)
+            throw new IllegalArgumentException("a step with limit "+head.limit+" already exists with a different value "+head.value);
+        return insertStep(orderedSteps.tail(), newStep).add(head);
     }
 
-    public StepFunction<IN, OUT> addSteps(IN[] steps, OUT[] values) {
-        assert steps.length==values.length;
-        var function = this;
-        for (int index = 0; index < steps.length; index++) {
-            function = function.addStep(steps[index], values[index]);
-        }
-        return function;
+    @Override
+    public boolean equals(Object obj) {
+        if (obj==this) return true;
+        if (!(obj instanceof StepFunction)) return false;
+        StepFunction fun = (StepFunction) obj;
+        return fun.constantValue.equals(this.constantValue) && fun.orderedSteps.equals(this.orderedSteps);
     }
 
-    private boolean assertUniqueValue(IN step, OUT value) {
-        Optional<Step<IN, OUT>> duplicate = this.orderedSteps.stream().filter(x -> x.limit.equals(step)).findFirst();
-        if (duplicate.isPresent()) {
-            if (duplicate.get().value.equals(value)) return false;
-            throw new IllegalArgumentException("this step is already defined with a different value ("+duplicate.get().limit +","+duplicate.get().value+")");
-        }
-        return true;
+    @Override
+    public int hashCode() {
+        return Objects.hash(constantValue, orderedSteps);
+    }
+
+    @Override
+    public String toString() {
+        return "f=["+constantValue+";"+orderedSteps+"]";
     }
 
     private static class Step<IN extends Comparable, OUT> implements Comparable<Step<IN, OUT>> {
@@ -102,6 +125,24 @@ public class StepFunction<IN extends Comparable, OUT> implements Function<IN, OU
          */
         public boolean contains(IN input)  {
             return limit.compareTo(input)<=0;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj==this) return true;
+            if (!(obj instanceof Step)) return false;
+            Step step = (Step) obj;
+            return this.limit.equals(step.limit) && this.value.equals(step.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(limit, value);
+        }
+
+        @Override
+        public String toString() {
+            return "("+limit+"="+value+")";
         }
     }
 }

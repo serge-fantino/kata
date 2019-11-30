@@ -11,6 +11,34 @@ import static org.junit.jupiter.api.Assertions.*;
 class StepFunctionTest {
 
     @Test
+    void shouldBuildSimpleStepFunction() {
+        // given
+        var function = new StepFunction(0);
+        // when
+        function = function.addStep(0, 10);
+        // then
+        assertEquals(0, function.apply(-10));
+        assertEquals(10, function.apply(0));
+        assertEquals(10, function.apply(10));
+    }
+
+    @Test
+    void shouldBuildTwoStepFunction() {
+        // given
+        var function = new StepFunction(0);
+        // when
+        function = function.addStep(0, 10);
+        function = function.addStep(10, 100);
+        // then
+        assertEquals(2, function.size());
+        assertEquals(0, function.apply(-5));
+        assertEquals(10, function.apply(0));
+        assertEquals(10, function.apply(5));
+        assertEquals(100, function.apply(10));
+        assertEquals(100, function.apply(15));
+    }
+
+    @Test
     void shouldBuildStepFunction() {
         // given
         var function = new StepFunction("undefined")
@@ -98,7 +126,7 @@ class StepFunctionTest {
     }
 
     @Test
-    void shouldImplementALinearByIntervalFunction() {
+    void shouldImplementLinearByIntervalFunction() {
         // given
         var function = new StepFunction<>((Function<Integer, Integer>)new StepFunction<Integer, Integer>(0))
                 .addStep(0, input -> input)
@@ -112,6 +140,36 @@ class StepFunctionTest {
                 new Integer[]{0,10,120,480},
                 results);
 
+    }
+
+    @Test
+    void shouldImplementEqualsAndHashcode() {
+        // given
+        var myFunction = new StepFunction<>("a").addStep(20, "b").addStep(30, "c");
+        // when
+        var sameFunction = new StepFunction<>("a").addStep(20, "b").addStep(30, "c");
+        var anotherFunction = new StepFunction<>("a").addStep(30, "c").addStep(20, "b");
+        var differentFunction = new StepFunction<>("a").addStep(20, "c").addStep(30, "b");
+        // then
+        assertEquals(myFunction, anotherFunction);
+        assertEquals(myFunction, myFunction);
+        assertEquals(myFunction, sameFunction);
+        assertEquals(myFunction, anotherFunction);
+        assertEquals(anotherFunction, myFunction);
+        assertNotEquals(myFunction, differentFunction);
+        assertNotEquals(differentFunction, myFunction);
+        assertNotEquals(myFunction, new Object());
+        assertEquals(myFunction.hashCode(), anotherFunction.hashCode());
+    }
+
+    @Test
+    void shouldPrintItselfInAscendingOrder() {
+        // given
+        var myFunction = new StepFunction<>("a").addStep(20, "b").addStep(30, "c");
+        // when
+        var print = myFunction.toString();
+        //
+        assertEquals("f=[a;(20=b);(30=c)]", print);
     }
 
 }
