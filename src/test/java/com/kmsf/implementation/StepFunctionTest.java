@@ -4,6 +4,7 @@ import com.kmsf.implementation.StepFunction;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -12,64 +13,75 @@ class StepFunctionTest {
     @Test
     void shouldBuildStepFunction() {
         // given
-        var builder = new StepFunction.Builder("undefined");
-        builder.add(0, "very-low");
-        builder.add(51, "low");
-        builder.add(101, "high");
-        builder.add(151, "very-high");
+        var function = new StepFunction("undefined")
+            .addStep(0, "very-low")
+            .addStep(51, "low")
+            .addStep(101, "high")
+            .addStep(151, "very-high");
         // when
-        var function = builder.build();
+        var results = Arrays.stream(new Integer[]{-10,10,60,120,200}).map(function).toArray();
         // then
         assertArrayEquals(
-                new String[]{"undefined","very-low","low","high","very-high"}
-                ,Arrays.stream(new Integer[]{-10,10,60,120,200}).map(function).toArray());
+                new String[]{"undefined","very-low","low","high","very-high"},
+                results);
+    }
+
+    @Test
+    void shouldBuildConstantFunction() {
+        // given
+        var function = new StepFunction(0);
+        // when
+        var results = Arrays.stream(new Integer[]{-10,10,60,120,200}).map(function).toArray();
+        // then
+        assertArrayEquals(
+                new Integer[]{0,0,0,0,0},
+                results);
     }
 
     @Test
     void shouldBuildStepFunctionWhateverTheOrderDefinition() {
         // given
-        var builder = new StepFunction.Builder("undefined");
-        builder.add(151, "very-high");
-        builder.add(0, "very-low");
-        builder.add(101, "high");
-        builder.add(51, "low");
+        var function = new StepFunction("undefined")
+            .addStep(151, "very-high")
+            .addStep(0, "very-low")
+            .addStep(101, "high")
+            .addStep(51, "low");
         // when
-        var function = builder.build();
+        var results = Arrays.stream(new Integer[]{-10,10,60,120,200}).map(function).toArray();
         // then
         assertArrayEquals(
-                new String[]{"undefined","very-low","low","high","very-high"}
-                ,Arrays.stream(new Integer[]{-10,10,60,120,200}).map(function).toArray());
+                new String[]{"undefined","very-low","low","high","very-high"},
+                results);
     }
 
     @Test
     void shouldNotAllowDefiningTwiceTheSamePointWithDifferentValue() {
         // given
-        var builder = new StepFunction.Builder("undefined");
+        StepFunction function = new StepFunction("undefined").addStep(0, "very-low").addStep(51, "low");
         // when
-        builder.add(0, "very-low");
-        builder.add(51, "low");
+        // ???
         // then
-        assertThrows(IllegalArgumentException.class, () -> builder.add(51, "high"));
+        assertThrows(IllegalArgumentException.class, () -> function.addStep(51, "high"));
     }
 
     @Test
     void shouldAllowDefiningTwiceTheSamePointWithSameValue() {
         // given
-        var builder = new StepFunction.Builder("undefined");
+        StepFunction function = new StepFunction("undefined").addStep(0, "very-low").addStep(51, "low");
         // when
-        builder.add(0, "very-low");
-        builder.add(51, "low");
+        // ???
         // then
-        assertDoesNotThrow(() -> builder.add(51, "low"));
+        assertDoesNotThrow(() -> function.addStep(51, "low"));
+        assertEquals(function, function.addStep(51, "low"));
     }
 
     @Test
     void shouldImplementIdentity() {
         // given
         var steps = new Integer[]{0,51,101,151};
-        var builder = new StepFunction.Builder<>(Integer.MIN_VALUE).addAll(steps, steps);
+        var function = new StepFunction<>(Integer.MIN_VALUE).addSteps(steps, steps);
         // when
-        var values = Arrays.stream(steps).map(builder.build()).toArray();
+        var values = Arrays.stream(steps).map(function).toArray();
         // then
         assertArrayEquals(steps, values);
     }
@@ -78,11 +90,28 @@ class StepFunctionTest {
     void shouldReturnUndefined() {
         // given
         var steps = new Integer[]{0,51,101,151};
-        var builder = new StepFunction.Builder<>(Integer.MIN_VALUE).addAll(steps, steps);
+        var function = new StepFunction<>(Integer.MIN_VALUE).addSteps(steps, steps);
         // when
-        var value = builder.build().apply(-1);
+        var value = function.apply(-1);
         // then
         assertEquals(Integer.MIN_VALUE, value);
+    }
+
+    @Test
+    void shouldImplementALinearByIntervalFunction() {
+        // given
+        var function = new StepFunction<>((Function<Integer, Integer>)new StepFunction<Integer, Integer>(0))
+                .addStep(0, input -> input)
+                .addStep(42, input -> 2*input)
+                .addStep(84, input -> 4*input);
+        // when
+        Function<Integer, Integer> finalFunction = x -> function.apply(x).apply(x);
+        var results = Arrays.stream(new Integer[]{-10,10,60,120}).map(x -> finalFunction.apply(x)).toArray();
+        // then
+        assertArrayEquals(
+                new Integer[]{0,10,120,480},
+                results);
+
     }
 
 }

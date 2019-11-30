@@ -8,11 +8,10 @@ public class BecquerelService {
      * Detector return an Alert based on the measured becquerel level
      */
     public static final StepFunction<Float, AlertLevel> alertDetector =
-            new StepFunction.Builder<Float, AlertLevel>(AlertLevel.Undefined)
-                .add(0f, AlertLevel.VeryLow)
-                .add(51f, AlertLevel.Low)
-                .add(101f, AlertLevel.High)
-                .add(151f, AlertLevel.VeryHigh)
-                .build();
+            new StepFunction<Float, AlertLevel>(AlertLevel.Undefined)
+                .addStep(0f, AlertLevel.VeryLow)
+                .addStep(51f, AlertLevel.Low)
+                .addStep(101f, AlertLevel.High)
+                .addStep(151f, AlertLevel.VeryHigh);
 
 }
